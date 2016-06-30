@@ -76,7 +76,7 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
           var message = _getAttributeFromXmlNode(error, 'message');
           addToParameter(paramDefn, null, message);
         }.bind(this));
-      };
+      };	  
 
       /**
        * Parses the parameters and stores the info in the ParameterDefinition
@@ -134,6 +134,12 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
         });
 
         param.values = _parseParameterValues(node, param);
+		param.dependencies = _parseParameterDependencies(node, param);
+		if(param.dependencies.length > 0 || param.attributes["post-processor-formula"] != undefined) {
+		  param.canBeValidatedOnClientSide = false;
+		} else {
+		  param.canBeValidatedOnClientSide = true;
+		}
         return param;
       };
 
@@ -176,6 +182,15 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
           values.push(pVal);
         }.bind(this));
         return values;
+      };
+	  
+      var _parseParameterDependencies = function (node, parameter) {
+        var dependencies = [];
+        $(node).find('dependencies name').each(function(i, dependency) {
+          dependency = $(dependency);
+		  dependencies.push(dependency.text());
+        }.bind(this));
+        return dependencies;
       };
 
       /**
