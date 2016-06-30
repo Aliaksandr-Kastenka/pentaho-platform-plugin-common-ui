@@ -631,7 +631,7 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
          * @method
          * @returns {Object} parameters The parameters name|value pair assigned to the dashboard instance
          */
-        getParameterValues: function () {
+        getParameterValues: function (selectParamsWithDependencies) {
           function parseNumber(val){
             try{
               return DojoNumber.parse(val, { locale : Util.normalizeDojoLocale(SESSION_LOCALE) });
@@ -640,7 +640,17 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
             }
           }
           var params = {};
-          this.getParamDefn().mapParameters(function (param) {
+          this.getParamDefn().mapParameters(function (param, group) {
+            /**/
+            //in case of "system parameters" group leave it as it is, otherwise check dependencies
+            if(selectParamsWithDependencies && group.name == "parameters") {
+              if(param.dependencies.length == 0 && this.getParameterDependents(param.name, group.name).length == 0) {
+                return;
+              } else if(params["validateParamsOnServer"] == undefined) {
+                params["validateParamsOnServer"] = true;
+              }
+            }
+            /**/
             var value = this.getParameterValue(this.getParameterName(param));
             if (value === '' || typeof value == 'undefined') {
               return;
@@ -730,6 +740,28 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
           }
 
           return this.dashboard.getParameterValue(param);
+        },
+
+        getParameterDependents: function (paramName, groupName) {
+          var dependents = [];
+          if(this.getParamDefn() && this.getParamDefn().parameterGroups) {
+            for(var i=0; i<this.getParamDefn().parameterGroups.length; i++) {
+              if(this.getParamDefn().parameterGroups[i].name == groupName) {
+                for(var j=0; j<this.getParamDefn().parameterGroups[i].parameters.length; j++) {
+                  if(this.getParamDefn().parameterGroups[i].parameters[j].dependencies.length > 0) {
+                    for(var k=0; k<this.getParamDefn().parameterGroups[i].parameters[j].dependencies.length; k++) {
+                      if(paramName == this.getParamDefn().parameterGroups[i].parameters[j].dependencies[k]) {
+                        dependents.push(this.getParamDefn().parameterGroups[i].parameters[j].name);
+                        break;
+                      }
+                    }
+                  }
+                }
+                break;
+              }
+            }
+          }
+          return dependents;
         },
 
         /**
@@ -844,7 +876,7 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
             this.nullValueParams.push(param);
           }
 
-          this._setTimeoutRefreshPrompt();
+          this._setTimeoutRefreshPrompt(param.name);
           this.parametersChanged = true;
 
           if (this.onStateChanged != null) {
@@ -860,9 +892,9 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
          * @private
          *
          */
-        _setTimeoutRefreshPrompt: function() {
+        _setTimeoutRefreshPrompt: function(name) {
           var myself = this;
-          setTimeout(function() { myself.refreshPrompt() }, 0);
+          setTimeout(function() { myself.refreshPrompt(undefined, name) }, 0);
         },
 
         /**
@@ -892,10 +924,10 @@ define(['cdf/lib/Base', 'cdf/Logger', 'dojo/number', 'dojo/i18n', 'common-ui/uti
          * @param {Boolean} isForceRefresh The flag indicates ability to update all components regardless of the difference previos and new xml from server
          * @method
          */
-        refreshPrompt: function (isForceRefresh) {
+        refreshPrompt: function (isForceRefresh, name) {
           try {
             this.isForceRefresh = isForceRefresh;
-            this.getParameterDefinition(this, this.refresh.bind(this));
+            this.getParameterDefinition(this, this.refresh.bind(this), name);
           } catch (e) {
             this.isForceRefresh = undefined;
             console.log(e);

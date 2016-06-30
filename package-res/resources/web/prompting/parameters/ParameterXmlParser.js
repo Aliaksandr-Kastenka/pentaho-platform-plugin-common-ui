@@ -134,6 +134,7 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
         });
 
         param.values = _parseParameterValues(node, param);
+        param.dependencies = _parseParameterDependencies(node, param);
         return param;
       };
 
@@ -176,6 +177,15 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
           values.push(pVal);
         }.bind(this));
         return values;
+      };
+	  
+      var _parseParameterDependencies = function (node, parameter) {
+        var dependencies = [];
+        $(node).find('dependencies name').each(function(i, dependency) {
+          dependency = $(dependency);
+          dependencies.push(dependency.text());
+        }.bind(this));
+        return dependencies;
       };
 
       /**
