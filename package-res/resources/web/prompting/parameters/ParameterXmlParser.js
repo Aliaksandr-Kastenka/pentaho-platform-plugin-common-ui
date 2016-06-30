@@ -76,6 +76,37 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
           var message = _getAttributeFromXmlNode(error, 'message');
           addToParameter(paramDefn, null, message);
         }.bind(this));
+      };	  
+	  
+      var _determineParamsValidation = function (paramDefn) {
+        for(var j=0; j<paramDefn.getParameterGroup("parameters").parameters.length; j++) {
+          var dependents = _parseDependents(paramDefn, paramDefn.getParameterGroup("parameters").parameters[j].name);
+          if(dependents.length > 0) {
+            paramDefn.getParameterGroup("parameters").parameters[j].canBeValidatedOnClientSide = false;
+            paramDefn.getParameterGroup("parameters").parameters[j].dependents = dependents;
+          } else if(paramDefn.getParameterGroup("parameters").parameters[j].attributes["post-processor-formula"] != undefined) {
+            paramDefn.getParameterGroup("parameters").parameters[j].canBeValidatedOnClientSide = false;
+          } else if(paramDefn.getParameterGroup("parameters").parameters[j].dependencies.length > 0) {
+            paramDefn.getParameterGroup("parameters").parameters[j].canBeValidatedOnClientSide = false;
+          } else {
+            paramDefn.getParameterGroup("parameters").parameters[j].canBeValidatedOnClientSide = true;  
+          }
+        }
+      };
+	  
+      var _parseDependents = function (paramDefn, paramName) {
+        var dependents = [];
+        for(var j=0; j<paramDefn.getParameterGroup("parameters").parameters.length; j++) {
+          if(paramDefn.getParameterGroup("parameters").parameters[j].dependencies.length > 0) {
+            for(var k=0; k<paramDefn.getParameterGroup("parameters").parameters[j].dependencies.length; k++) {
+              if(paramName == paramDefn.getParameterGroup("parameters").parameters[j].dependencies[k]) {
+                dependents.push(paramDefn.getParameterGroup("parameters").parameters[j].name);
+                break;
+              }
+            }
+          }
+        }
+        return dependents;
       };
 
       /**
@@ -134,6 +165,7 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
         });
 
         param.values = _parseParameterValues(node, param);
+        param.dependencies = _parseParameterDependencies(node, param);
         return param;
       };
 
@@ -176,6 +208,15 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
           values.push(pVal);
         }.bind(this));
         return values;
+      };
+	  
+      var _parseParameterDependencies = function (node, parameter) {
+        var dependencies = [];
+        $(node).find('dependencies name').each(function(i, dependency) {
+          dependency = $(dependency);
+          dependencies.push(dependency.text());
+        }.bind(this));
+        return dependencies;
       };
 
       /**
@@ -274,6 +315,7 @@ define(['cdf/lib/Base', 'common-ui/util/base64', 'common-ui/util/formatting',  '
 
           _parseParameters(paramDefn, parameters);
           _parseErrors(paramDefn, xml);
+          _determineParamsValidation(paramDefn);
 
           return paramDefn;
         }

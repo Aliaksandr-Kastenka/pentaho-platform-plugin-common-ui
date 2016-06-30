@@ -42,6 +42,9 @@ define(['common-ui/jquery-clean'], function ($) {
       timezoneHint: undefined,
       attributes: {},
       values: [],
+      dependencies: [],
+      dependents: [],
+      canBeValidatedOnClientSide: undefined,
 
       /**
        * Checks if the value provided is selected in this parameter
