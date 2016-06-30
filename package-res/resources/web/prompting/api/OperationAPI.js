@@ -76,7 +76,7 @@ define(['common-ui/prompting/PromptPanel'], function(PromptPanel) {
         this._promptPanel.setParamDefn(paramDefn);
 
         // Override of getParameterDefinition
-        this._promptPanel.getParameterDefinition = (function(promptPanel, refreshCallback) {
+        this._promptPanel.getParameterDefinition = (function(promptPanel, refreshCallback, name) {
           getParameterDefinitionCallback(api, (function(paramDefn) {
             if (!paramDefn) {
               api.log.error(this._msgs.NO_PARAM_DEFN);
@@ -85,7 +85,7 @@ define(['common-ui/prompting/PromptPanel'], function(PromptPanel) {
             }
 
             refreshCallback(paramDefn);
-          }).bind(this));
+          }).bind(this), name);
         }).bind(this);
       }).bind(this));
     };
@@ -115,10 +115,17 @@ define(['common-ui/prompting/PromptPanel'], function(PromptPanel) {
      * @method
      * @returns {JSON} parameter values
      */
-    this.getParameterValues = function() {
+    this.getParameterValues = function(paramName) {
+      var dependencies;
       var values;
       try {
-        values = this._getPromptPanel().getParameterValues();
+        if(paramName) {
+          dependencies = this._getPromptPanel().getParameterDependencies(paramName, "parameters");
+          if(dependencies.length > 0 ) {
+            dependencies.push(paramName);
+          }
+        }
+        values = this._getPromptPanel().getParameterValues(paramName, dependencies);
       } catch(e) {
         api.log.error(e);
         values = {};
